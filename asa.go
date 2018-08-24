@@ -28,6 +28,14 @@ type ASA struct {
 type ReferenceObject struct {
 	Kind     string `json:"kind"`
 	ObjectID string `json:"objectId,omitempty"`
+	Name     string `json:"name,omitempty"`
+	SelfLink string `json:"selfLink,omitempty"`
+}
+
+type rangeInfo struct {
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
+	Total  int `json:"total"`
 }
 
 type basicAuthorization struct {
@@ -165,6 +173,9 @@ func (a *ASA) request(endpoint, method string, r *requestParameters) (bodyText [
 		glog.Errorf("request - readall error: %s\n", err)
 		return nil, err
 	}
+
+	// spew.Dump(string(jsonReq))
+	// spew.Dump(string(bodyText))
 
 	glog.Infof("Response: %s\n", strconv.Itoa(resp.StatusCode))
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {

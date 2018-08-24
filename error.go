@@ -6,27 +6,30 @@ import (
 )
 
 // ASAMessage  Error message returned by API
-type ASAMessage struct {
-	Level   string
-	Details string
-	Code    string
-}
+// type ASAMessage struct {
+// 	Level   string
+// 	Details string
+// 	Code    string
+// }
 
 // ASAError Error returned by API
 type ASAError struct {
-	Severity string
-	Messages []ASAMessage
+	Level   string
+	Details string
+	Code    string
+	// Severity string
+	// Messages []ASAMessage
 }
 
 func (ae ASAError) Error() string {
-	return fmt.Sprintf("%s: with messages %+v", ae.Severity, ae.Messages)
+	return fmt.Sprintf("%s: with code %s and message %s", ae.Level, ae.Code, ae.Details)
 }
 
 func parseResponse(bodyText []byte) (err error) {
 	//spew.Dump(string(bodyText))
 	if len(bodyText) > 0 {
 		var v struct {
-			Error []ASAMessage `json:"messages"`
+			Error []ASAError `json:"messages"`
 		}
 
 		//log.Print("Response: " + string(bodyText))
@@ -36,11 +39,11 @@ func parseResponse(bodyText []byte) (err error) {
 			return err
 		}
 
-		aErr := new(ASAError)
-		aErr.Messages = v.Error
-		//TODO: need to populate the asaError with the highest severity found
+		if len(v.Error) == 1 {
+			return v.Error[0]
+		}
 
-		return aErr
+		return fmt.Errorf("we finally found an error with more than 1 message! %+v", v)
 	}
 
 	return nil

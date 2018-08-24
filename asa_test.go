@@ -84,12 +84,7 @@ func TestError(t *testing.T) {
 		return
 	}
 
-	if e, ok := err.(*goasa.ASAError); ok {
-		if len(e.Messages) != 1 {
-			t.Errorf("error: we should have exactly 1 message, we have %d\n", len(e.Messages))
-			return
-		}
-	} else {
+	if _, ok := err.(goasa.ASAError); !ok {
 		t.Errorf("error: we don't have an ASAError, WTF?\n")
 		return
 	}

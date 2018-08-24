@@ -6,5 +6,24 @@ const (
 	apiDELETE string = "DELETE"
 	apiGET    string = "GET"
 
-	apiBasePath string = "api/"
+	apiMaxResults                  int    = 100
+	apiBasePath                    string = "api/"
+	apiNetworkObjectsEndpoint      string = "objects/networkobjects"
+	apiNetworkObjectGroupsEndpoint string = "objects/networkobjectgroups"
+
+	networkObjectKind         string = "object#NetworkObj"
+	networkObjectRefKind      string = "objectRef#NetworkObj"
+	networkObjectGroupKind    string = "object#NetworkObjGroup"
+	networkObjectGroupRefKind string = "objectRef#NetworkObj"
+
+	errorDuplicate string = "DUPLICATE"
+
+	//DuplicateActionError Error on duplicate
+	DuplicateActionError int = 0
+
+	//DuplicateActionDoNothing Don't do anything
+	DuplicateActionDoNothing int = 1
+
+	//DuplicateActionReplace Replace
+	DuplicateActionReplace int = 2
 )
