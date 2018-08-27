@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/golang/glog"
 	goasa "github.com/remiphilippe/go-asa"
 )
 
@@ -60,7 +61,7 @@ func TestNetworkObjectGroupCreate(t *testing.T) {
 		g1.Members = append(g1.Members, all1[i].Reference())
 	}
 
-	err = asa.CreateNetworkObjectGroup(g1)
+	err = asa.CreateNetworkObjectGroup(g1, goasa.DuplicateActionDoNothing)
 	if err != nil {
 		t.Errorf("error: %s\n", err)
 	}
@@ -72,7 +73,7 @@ func TestNetworkObjectGroupCreate(t *testing.T) {
 		g2.Members = append(g2.Members, all2[i].Reference())
 	}
 
-	err = asa.CreateNetworkObjectGroup(g2)
+	err = asa.CreateNetworkObjectGroup(g2, goasa.DuplicateActionDoNothing)
 	if err != nil {
 		t.Errorf("error: %s\n", err)
 	}
@@ -143,4 +144,43 @@ func TestNetworkObjectGroupDelete(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCreateNetworkObjectGroupFromIPs(t *testing.T) {
+	var err error
+
+	asa, err := initTest()
+	if err != nil {
+		glog.Errorf("error: %s\n", err)
+		return
+	}
+
+	ips1 := []string{
+		"1.2.3.4",
+		"5.6.7.8",
+		"9.10.11.12",
+	}
+
+	g, err := asa.CreateNetworkObjectGroupFromIPs("testAutoCreate", ips1, goasa.DuplicateActionError)
+	if err != nil {
+		t.Errorf("error: %s\n", err)
+		return
+	}
+
+	if len(g.Members) != 3 {
+		t.Errorf("Not enough objects... %d\n", len(g.Members))
+	}
+
+	err = asa.DeleteNetworkObjectGroup(g)
+	if err != nil {
+		t.Errorf("error: %s\n", err)
+	}
+
+	for i := range g.Members {
+		err = asa.DeleteNetworkObject(g.Members[i])
+		if err != nil {
+			t.Errorf("error: %s\n", err)
+		}
+	}
+
 }

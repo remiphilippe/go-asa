@@ -202,6 +202,10 @@ func (a *ASA) DeleteNetworkObject(n interface{}) error {
 		return fmt.Errorf("unknown type")
 	}
 
+	if objectID == "" {
+		return fmt.Errorf("error objectid is null")
+	}
+
 	err = a.Delete(fmt.Sprintf("%s/%s", apiNetworkObjectsEndpoint, objectID))
 	if err != nil {
 		if a.debug {
@@ -211,4 +215,52 @@ func (a *ASA) DeleteNetworkObject(n interface{}) error {
 	}
 
 	return nil
+}
+
+// CreateNetworkObjectsFromIPs Create Network objects from an array of IP
+func (a *ASA) CreateNetworkObjectsFromIPs(ips []string) ([]*NetworkObject, error) {
+	var err error
+	var retval []*NetworkObject
+
+	objs, err := a.GetAllNetworkObjects()
+	if err != nil {
+		if a.debug {
+			glog.Errorf("Error: %s\n", err)
+		}
+		return nil, err
+	}
+
+	found := make(map[string]bool)
+
+	for i := range ips {
+		for o := range objs {
+			if ips[i] == objs[o].Host.Value && objs[o].Host.Kind == networkObjectTypeIPv4 {
+				retval = append(retval, objs[o])
+				found[ips[i]] = true
+				break
+			}
+		}
+	}
+
+	for i := range ips {
+		if _, ok := found[ips[i]]; !ok {
+
+			n := new(NetworkObject)
+			n.Name = ips[i]
+			n.ObjectID = ips[i]
+			n.Host.Value = ips[i]
+			n.Host.Kind = networkObjectTypeIPv4
+
+			err = a.CreateNetworkObject(n, DuplicateActionDoNothing)
+			if err != nil {
+				if a.debug {
+					glog.Errorf("Error: %s\n", err)
+				}
+				return nil, err
+			}
+			retval = append(retval, n)
+		}
+	}
+
+	return retval, nil
 }

@@ -12,6 +12,11 @@ func TestNetworkObjectGetAll(t *testing.T) {
 	// if true {
 	// 	return
 	// }
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	var err error
 	var n *goasa.NetworkObject
 	var o []*goasa.NetworkObject
@@ -161,4 +166,67 @@ func TestNetworkObjectDuplicate(t *testing.T) {
 	if err != nil {
 		t.Errorf("error: %s\n", err)
 	}
+}
+
+func TestCreateNetworkObjectFromIPs(t *testing.T) {
+	var err error
+
+	asa, err := initTest()
+	if err != nil {
+		t.Errorf("error: %s\n", err)
+		return
+	}
+
+	ips1 := []string{
+		"1.2.3.4",
+		"5.6.7.8",
+		"9.10.11.12",
+	}
+
+	ips2 := []string{
+		"1.2.3.4",
+		"5.6.7.8",
+		"9.10.11.12",
+		"13.14.15.16",
+	}
+
+	ns, err := asa.CreateNetworkObjectsFromIPs(ips1)
+	if err != nil {
+		t.Errorf("error: %s\n", err)
+		return
+	}
+
+	if len(ns) != 3 {
+		t.Errorf("we should have at least 3 members, have %d\n", len(ns))
+	}
+
+	ns2, err := asa.CreateNetworkObjectsFromIPs(ips2)
+	if err != nil {
+		t.Errorf("error: %s\n", err)
+		return
+	}
+
+	if len(ns2) != 4 {
+		t.Errorf("we should have at least 4 members, have %d\n", len(ns2))
+	}
+
+	found := false
+	for i := range ns2 {
+		if ns2[i].Host.Value == "13.14.15.16" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("didn't find 13.14.15.16 in array\n")
+	}
+
+	for i := range ns2 {
+		err = asa.DeleteNetworkObject(ns2[i])
+		if err != nil {
+			t.Errorf("error: %s\n", err)
+		}
+	}
+
 }

@@ -157,7 +157,7 @@ func (a *ASA) GetNetworkObjectGroupByID(id string) (*NetworkObjectGroup, error) 
 }
 
 // CreateNetworkObjectGroup Create a new network object
-func (a *ASA) CreateNetworkObjectGroup(g *NetworkObjectGroup) error {
+func (a *ASA) CreateNetworkObjectGroup(g *NetworkObjectGroup, duplicateAction int) error {
 	var err error
 
 	g.Kind = networkObjectGroupKind
@@ -218,10 +218,26 @@ func (a *ASA) CreateNetworkObjectGroup(g *NetworkObjectGroup) error {
 }
 
 // DeleteNetworkObjectGroup Delete a network object
-func (a *ASA) DeleteNetworkObjectGroup(g *NetworkObjectGroup) error {
+func (a *ASA) DeleteNetworkObjectGroup(g interface{}) error {
 	var err error
+	var objectID string
 
-	err = a.Delete(fmt.Sprintf("%s/%s", apiNetworkObjectGroupsEndpoint, g.ObjectID))
+	switch v := g.(type) {
+	case *ReferenceObject:
+		objectID = v.ObjectID
+	case *NetworkObjectGroup:
+		objectID = v.ObjectID
+	case string:
+		objectID = v
+	default:
+		return fmt.Errorf("unknown type")
+	}
+
+	if objectID == "" {
+		return fmt.Errorf("error objectid is null")
+	}
+
+	err = a.Delete(fmt.Sprintf("%s/%s", apiNetworkObjectGroupsEndpoint, objectID))
 	if err != nil {
 		if a.debug {
 			glog.Errorf("Error: %s\n", err)
@@ -230,4 +246,35 @@ func (a *ASA) DeleteNetworkObjectGroup(g *NetworkObjectGroup) error {
 	}
 
 	return nil
+}
+
+// CreateNetworkObjectGroupFromIPs Create an object group from an array of ip address. Network objects = ip.
+func (a *ASA) CreateNetworkObjectGroupFromIPs(name string, ips []string, duplicateAction int) (*NetworkObjectGroup, error) {
+	var err error
+
+	ns, err := a.CreateNetworkObjectsFromIPs(ips)
+	if err != nil {
+		if a.debug {
+			glog.Errorf("Error: %s\n", err)
+		}
+		return nil, err
+	}
+
+	g := new(NetworkObjectGroup)
+	g.Name = name
+	g.ObjectID = name
+
+	for i := range ns {
+		g.Members = append(g.Members, ns[i].Reference())
+	}
+
+	err = a.CreateNetworkObjectGroup(g, duplicateAction)
+	if err != nil {
+		if a.debug {
+			glog.Errorf("Error: %s\n", err)
+		}
+		return nil, err
+	}
+
+	return g, nil
 }

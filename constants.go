@@ -16,6 +16,8 @@ const (
 	networkObjectGroupKind    string = "object#NetworkObjGroup"
 	networkObjectGroupRefKind string = "objectRef#NetworkObj"
 
+	networkObjectTypeIPv4 string = "IPv4Address"
+
 	errorDuplicate string = "DUPLICATE"
 
 	//DuplicateActionError Error on duplicate
