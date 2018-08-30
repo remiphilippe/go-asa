@@ -30,6 +30,7 @@ type ReferenceObject struct {
 	ObjectID string `json:"objectId,omitempty"`
 	Name     string `json:"name,omitempty"`
 	SelfLink string `json:"selfLink,omitempty"`
+	Value    string `json:"value,omitempty"`
 }
 
 type rangeInfo struct {
@@ -177,6 +178,14 @@ func (a *ASA) request(endpoint, method string, r *requestParameters) (bodyText [
 	// spew.Dump(string(jsonReq))
 	// spew.Dump(string(bodyText))
 
+	if a.debug {
+		if string(jsonReq) != "" {
+			glog.Infof("request: %s\n", jsonReq)
+		}
+
+		glog.Infof("response: %s\n", bodyText)
+	}
+
 	glog.Infof("Response: %s\n", strconv.Itoa(resp.StatusCode))
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if resp.StatusCode == 401 {
@@ -185,9 +194,9 @@ func (a *ASA) request(endpoint, method string, r *requestParameters) (bodyText [
 
 		err = parseResponse(bodyText)
 		if err != nil {
-			// if f.debug {
-			// 	glog.Errorf("POST - parse response error: %s\n", err)
-			// }
+			if a.debug {
+				glog.Errorf("parse response error: %s\n", err)
+			}
 			return nil, err
 		}
 

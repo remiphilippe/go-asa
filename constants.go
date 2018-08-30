@@ -10,13 +10,16 @@ const (
 	apiBasePath                    string = "api/"
 	apiNetworkObjectsEndpoint      string = "objects/networkobjects"
 	apiNetworkObjectGroupsEndpoint string = "objects/networkobjectgroups"
+	apiAccessEndpoint              string = "access"
 
 	networkObjectKind         string = "object#NetworkObj"
 	networkObjectRefKind      string = "objectRef#NetworkObj"
 	networkObjectGroupKind    string = "object#NetworkObjGroup"
 	networkObjectGroupRefKind string = "objectRef#NetworkObj"
+	extendedACEKind           string = "object#ExtendedACE"
 
-	networkObjectTypeIPv4 string = "IPv4Address"
+	networkObjectTypeIPv4     string = "IPv4Address"
+	networkObjectTypeProtocol string = "NetworkProtocol"
 
 	errorDuplicate string = "DUPLICATE"
 

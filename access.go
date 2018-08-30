@@ -8,26 +8,39 @@ import (
 	"github.com/golang/glog"
 )
 
-// NetworkObject An object represents the network (Note: The field level constraints listed here might not cover all the constraints on the field. Additional constraints might exist.)
-type NetworkObject struct {
+// AccessRule Acces Rule object
+type AccessRule struct {
 	ReferenceObject
-	Host ReferenceObject `json:"host"`
+	SourceService      *ReferenceObject `json:"sourceService"`
+	SrcSecurity        *ReferenceObject `json:"srcSecurity,omitempty"`
+	RuleLogging        interface{}      `json:"ruleLogging,omitempty"`
+	IsAccessRule       bool             `json:"isAccessRule,omitempty"`
+	TimeRange          *ReferenceObject `json:"timeRange,omitempty"`
+	DestinationAddress *ReferenceObject `json:"destinationAddress,omitempty"`
+	Active             bool             `json:"active,omitempty"`
+	DestinationService *ReferenceObject `json:"destinationService,omitempty"`
+	DstSecurity        *ReferenceObject `json:"dstSecurity,omitempty"`
+	User               *ReferenceObject `json:"user,omitempty"`
+	Permit             bool             `json:"permit"`
+	Remarks            []string         `json:"remarks,omitempty"`
+	Position           int              `json:"position,omitempty"`
+	SourceAddress      *ReferenceObject `json:"sourceAddress,omitempty"`
 }
 
 // Reference Returns a reference object
-func (n *NetworkObject) Reference() *ReferenceObject {
+func (a *AccessRule) Reference() *ReferenceObject {
 	r := ReferenceObject{
-		Kind:     networkObjectRefKind,
-		ObjectID: n.ObjectID,
-		Name:     n.Name,
+		Kind:     extendedACEKind,
+		ObjectID: a.ObjectID,
+		Name:     a.Name,
 	}
 
 	return &r
 }
 
-func (a *ASA) getNetworkObjects(limit, offset int) ([]*NetworkObject, error) {
+func (a *ASA) getAccessObjects(limit, offset int, intf string) ([]*AccessRule, error) {
 	var err error
-	var retval []*NetworkObject
+	var retval []*AccessRule
 	var l int
 
 	if limit > apiMaxResults || limit < 1 {
@@ -40,15 +53,16 @@ func (a *ASA) getNetworkObjects(limit, offset int) ([]*NetworkObject, error) {
 	query["limit"] = strconv.Itoa(l)
 	query["offset"] = strconv.Itoa(offset)
 
-	endpoint := apiNetworkObjectsEndpoint
+	endpoint := fmt.Sprintf("%s/%s/rules", apiAccessEndpoint, intf)
+	//spew.Dump(endpoint)
 	data, err := a.Get(endpoint, query)
 	if err != nil {
 		return nil, err
 	}
 
 	var v struct {
-		Items []*NetworkObject `json:"items"`
-		Range rangeInfo        `json:"rangeInfo"`
+		Items []*AccessRule `json:"items"`
+		Range rangeInfo     `json:"rangeInfo"`
 	}
 
 	err = json.Unmarshal(data, &v)
@@ -75,7 +89,7 @@ func (a *ASA) getNetworkObjects(limit, offset int) ([]*NetworkObject, error) {
 	glog.Infof("Upperbound: %d, Offset: %d, limit: %d\n", upperBound, v.Range.Offset, l)
 	if v.Range.Offset+l < upperBound {
 
-		res, err := a.getNetworkObjects(limit, v.Range.Offset+l)
+		res, err := a.getAccessObjects(limit, v.Range.Offset+l, intf)
 		if err != nil {
 			if a.debug {
 				glog.Errorf("Error: %s\n", err)
@@ -89,27 +103,27 @@ func (a *ASA) getNetworkObjects(limit, offset int) ([]*NetworkObject, error) {
 	return retval, nil
 }
 
-// GetAllNetworkObjects Get a list of all network objects
-func (a *ASA) GetAllNetworkObjects() ([]*NetworkObject, error) {
-	return a.getNetworkObjects(0, 0)
+// GetAllGlobalAccessObjects Get a list of all network objects
+func (a *ASA) GetAllGlobalAccessObjects() ([]*AccessRule, error) {
+	return a.getAccessObjects(0, 0, "global")
 }
 
-// GetNetworkObjects Get a list of all network objects
-func (a *ASA) GetNetworkObjects(limit int) ([]*NetworkObject, error) {
-	return a.getNetworkObjects(limit, 0)
+// GetGlobalAccessObjects Get a list of all network objects
+func (a *ASA) GetGlobalAccessObjects(limit int) ([]*AccessRule, error) {
+	return a.getAccessObjects(limit, 0, "global")
 }
 
-// GetNetworkObjectByID Get a network object by ID
-func (a *ASA) GetNetworkObjectByID(id string) (*NetworkObject, error) {
+// GetAccessObjectByID Get a network object by ID
+func (a *ASA) GetAccessObjectByID(intf, id string) (*AccessRule, error) {
 	var err error
 
-	endpoint := fmt.Sprintf("%s/%s", apiNetworkObjectsEndpoint, id)
+	endpoint := fmt.Sprintf("%s/%s/rules/%s", apiAccessEndpoint, intf, id)
 	data, err := a.Get(endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var v *NetworkObject
+	var v *AccessRule
 
 	err = json.Unmarshal(data, &v)
 	if err != nil {
@@ -122,16 +136,18 @@ func (a *ASA) GetNetworkObjectByID(id string) (*NetworkObject, error) {
 	return v, nil
 }
 
-// CreateNetworkObject Create a new network object
-func (a *ASA) CreateNetworkObject(n *NetworkObject, duplicateAction int) error {
+// CreateAccessRule Create a new network object
+func (a *ASA) CreateAccessRule(intf string, r *AccessRule, duplicateAction int) error {
 	var err error
 
-	n.Kind = networkObjectKind
-	_, err = a.Post(apiNetworkObjectsEndpoint, n)
+	r.Kind = extendedACEKind
+	endpoint := fmt.Sprintf("%s/%s/rules", apiAccessEndpoint, intf)
+	_, err = a.Post(endpoint, r)
 	if err != nil {
 		asaErr := err.(ASAError)
 		//spew.Dump(asaErr)
 		if asaErr.Code == errorDuplicate {
+			r.ObjectID = asaErr.Details
 			if a.debug {
 				glog.Warningf("This is a duplicate\n")
 			}
@@ -183,15 +199,15 @@ func (a *ASA) CreateNetworkObject(n *NetworkObject, duplicateAction int) error {
 	return nil
 }
 
-// DeleteNetworkObject Delete a network object
-func (a *ASA) DeleteNetworkObject(n interface{}) error {
+// DeleteAccessRule Delete a network object
+func (a *ASA) DeleteAccessRule(intf string, n interface{}) error {
 	var err error
 	var objectID string
 
 	switch v := n.(type) {
 	case *ReferenceObject:
 		objectID = v.ObjectID
-	case *NetworkObject:
+	case *AccessRule:
 		objectID = v.ObjectID
 	case string:
 		objectID = v
@@ -203,7 +219,8 @@ func (a *ASA) DeleteNetworkObject(n interface{}) error {
 		return fmt.Errorf("error objectid is null")
 	}
 
-	err = a.Delete(fmt.Sprintf("%s/%s", apiNetworkObjectsEndpoint, objectID))
+	endpoint := fmt.Sprintf("%s/%s/rules/%s", apiAccessEndpoint, intf, objectID)
+	err = a.Delete(endpoint)
 	if err != nil {
 		if a.debug {
 			glog.Errorf("Error: %s\n", err)
@@ -212,52 +229,4 @@ func (a *ASA) DeleteNetworkObject(n interface{}) error {
 	}
 
 	return nil
-}
-
-// CreateNetworkObjectsFromIPs Create Network objects from an array of IP
-func (a *ASA) CreateNetworkObjectsFromIPs(ips []string) ([]*NetworkObject, error) {
-	var err error
-	var retval []*NetworkObject
-
-	objs, err := a.GetAllNetworkObjects()
-	if err != nil {
-		if a.debug {
-			glog.Errorf("Error: %s\n", err)
-		}
-		return nil, err
-	}
-
-	found := make(map[string]bool)
-
-	for i := range ips {
-		for o := range objs {
-			if ips[i] == objs[o].Host.Value && objs[o].Host.Kind == networkObjectTypeIPv4 {
-				retval = append(retval, objs[o])
-				found[ips[i]] = true
-				break
-			}
-		}
-	}
-
-	for i := range ips {
-		if _, ok := found[ips[i]]; !ok {
-
-			n := new(NetworkObject)
-			n.Name = ips[i]
-			n.ObjectID = ips[i]
-			n.Host.Value = ips[i]
-			n.Host.Kind = networkObjectTypeIPv4
-
-			err = a.CreateNetworkObject(n, DuplicateActionDoNothing)
-			if err != nil {
-				if a.debug {
-					glog.Errorf("Error: %s\n", err)
-				}
-				return nil, err
-			}
-			retval = append(retval, n)
-		}
-	}
-
-	return retval, nil
 }

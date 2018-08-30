@@ -16,3 +16,8 @@ func (a *ASA) Save() error {
 
 	return nil
 }
+
+// SystemObjectAny Any Object
+func (a *ASA) SystemObjectAny() *ReferenceObject {
+	return &ReferenceObject{Kind: "AnyIPAddress", Value: "any"}
+}
