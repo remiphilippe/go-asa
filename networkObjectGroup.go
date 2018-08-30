@@ -163,21 +163,21 @@ func (a *ASA) CreateNetworkObjectGroup(g *NetworkObjectGroup, duplicateAction in
 	g.Kind = networkObjectGroupKind
 	_, err = a.Post(apiNetworkObjectGroupsEndpoint, g)
 	if err != nil {
-		// ftdErr := err.(*FTDError)
-		// //spew.Dump(ftdErr)
-		// if len(ftdErr.Message) > 0 && (ftdErr.Message[0].Code == "duplicateName" || ftdErr.Message[0].Code == "newInstanceWithDuplicateId") {
-		// 	if f.debug {
-		// 		glog.Warningf("This is a duplicate\n")
-		// 	}
-		// 	if duplicateAction == DuplicateActionError {
-		// 		return err
-		// 	}
-		// } else {
-		if a.debug {
-			glog.Errorf("Error: %s\n", err)
+		asaErr := err.(ASAError)
+		//spew.Dump(asaErr)
+		if asaErr.Code == errorDuplicate {
+			if a.debug {
+				glog.Warningf("This is a duplicate\n")
+			}
+			if duplicateAction == DuplicateActionError {
+				return err
+			}
+		} else {
+			if a.debug {
+				glog.Errorf("Error: %s\n", err)
+			}
+			return err
 		}
-		return err
-		// }
 	}
 
 	// query := fmt.Sprintf("name:%s", n.Name)
