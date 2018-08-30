@@ -15,7 +15,7 @@ const (
 	networkObjectKind         string = "object#NetworkObj"
 	networkObjectRefKind      string = "objectRef#NetworkObj"
 	networkObjectGroupKind    string = "object#NetworkObjGroup"
-	networkObjectGroupRefKind string = "objectRef#NetworkObj"
+	networkObjectGroupRefKind string = "objectRef#NetworkObjGroup"
 	extendedACEKind           string = "object#ExtendedACE"
 
 	networkObjectTypeIPv4     string = "IPv4Address"
