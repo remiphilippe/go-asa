@@ -51,10 +51,17 @@ type NetworkServiceGroup struct {
 
 // Reference Returns a reference object
 func (g *NetworkServiceGroup) Reference() *ReferenceObject {
+	var kind string
+
+	switch g.Kind {
+	case networkServiceGroupObjectKind:
+		kind = networkServiceGroupObjectRefKind
+	}
+
 	r := ReferenceObject{
 		ObjectID: g.ObjectID,
 		Name:     g.Name,
-		Kind:     g.Kind,
+		Kind:     kind,
 	}
 
 	return &r
